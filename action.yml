@@ -1,5 +1,5 @@
 name: autorun-audit
-description: Fail when a repository contains files that run code on open, install or agent start (VS Code tasks, agent hooks, MCP servers, dev containers, git hooks).
+description: "Fail when a repository contains files that run code on open, install or agent start (VS Code tasks, agent hooks, MCP servers, dev containers, git hooks)."
 author: Ag3nt Sc4rn
 branding:
   icon: shield
@@ -7,24 +7,24 @@ branding:
 
 inputs:
   path:
-    description: Directory to scan, relative to the workspace, or a git URL.
+    description: "Directory to scan, relative to the workspace, or a git URL."
     default: "."
   fail-on:
-    description: Fail when a finding is at or above this severity (info, low, medium, high, critical) or "none".
+    description: "Fail when a finding is at or above this severity (info, low, medium, high, critical) or \"none\"."
     default: high
   min-severity:
-    description: Hide findings below this severity in the log and SARIF.
+    description: "Hide findings below this severity in the log and SARIF."
     default: low
   allowlist:
-    description: Path to an allowlist file of reviewed findings (see the README). Empty for none.
+    description: "Path to an allowlist file of reviewed findings (see the README). Empty for none."
     default: ""
   upload-sarif:
-    description: Upload results to GitHub code scanning. Needs `security-events: write`.
+    description: "Upload results to GitHub code scanning. Needs `security-events: write`."
     default: "true"
 
 outputs:
   sarif-file:
-    description: Path of the SARIF report.
+    description: "Path of the SARIF report."
     value: ${{ steps.scan.outputs.sarif-file }}
 
 runs:
