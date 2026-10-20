@@ -1,6 +1,6 @@
 [project]
 name = "autorun-audit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Find code that runs without you asking: Python startup files (.pth/.start) and repo files that execute when a folder is opened."
 readme = "README.md"
 license = "MIT"
