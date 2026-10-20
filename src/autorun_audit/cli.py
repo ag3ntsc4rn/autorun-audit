@@ -5,12 +5,12 @@ from __future__ import annotations
 import enum
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import typer
 from rich.console import Console
 
-from autorun_audit import __version__, report
+from autorun_audit import __version__, remote, report
 from autorun_audit.models import Finding, Severity
 from autorun_audit.scanners import pyenv
 from autorun_audit.scanners.repo import scan_repo
@@ -66,17 +66,40 @@ def main(
 
 @app.command()
 def repo(
-    path: Annotated[Path, typer.Argument(help="Repository to scan.")] = Path("."),
+    target: Annotated[
+        str,
+        typer.Argument(
+            help="Directory to scan, or a git URL (https://, ssh://, git@host:) to clone and scan."
+        ),
+    ] = ".",
+    ref: Annotated[
+        str | None,
+        typer.Option("--ref", help="Branch or tag to scan when TARGET is a URL (default: HEAD)."),
+    ] = None,
     fmt: FormatOpt = Format.text,
     min_severity: MinSeverityOpt = "low",
     fail_on: FailOnOpt = "high",
     output: OutputOpt = None,
 ) -> None:
-    """Scan a checkout for things that run when you open, enter or install it."""
+    """Scan a checkout, or a remote repository before you clone it, for things that run when
+    you open, enter or install it."""
+    if remote.is_remote(target):
+        try:
+            with remote.cloned(target, ref) as root:
+                findings = scan_repo(root)
+        except remote.CloneError as exc:
+            _usage_error(str(exc))
+        label = f"{target}@{ref}" if ref else target
+        _emit(findings, fmt, min_severity, fail_on, output, target=label, base=None)
+        return
+
+    if ref:
+        _usage_error("--ref only applies when scanning a git URL")
+    path = Path(target)
     if not path.is_dir():
-        _usage_error(f"{path} is not a directory")
+        _usage_error(f"{target} is not a directory or a git URL")
     root = path.resolve()
-    _emit(scan_repo(root), fmt, min_severity, fail_on, output, target=str(path), base=root)
+    _emit(scan_repo(root), fmt, min_severity, fail_on, output, target=target, base=root)
 
 
 @app.command()
@@ -121,7 +144,7 @@ def env(
     )
 
 
-def _usage_error(message: str) -> None:
+def _usage_error(message: str) -> NoReturn:
     Console(stderr=True).print(f"[red]error:[/red] {message}")
     raise typer.Exit(2)
 
@@ -133,7 +156,6 @@ def _parse_severity(value: str, *, allow_none: bool = False) -> Severity | None:
         return Severity.parse(value)
     except ValueError as exc:
         _usage_error(str(exc))
-        raise  # unreachable; keeps type checkers happy
 
 
 def _emit(

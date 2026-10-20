@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `autorun-audit repo` accepts a git URL (`https://`, `ssh://` or `git@host:`) and scans the
+  repository before you clone it: a hardened shallow clone in a temporary directory that
+  runs no hooks, submodules or filters, allows only network protocols, and checks symlinks
+  out as plain files. `--ref` picks a branch or tag.
+
 ## [0.1.1] - 2026-10-20
 
 ### Fixed
