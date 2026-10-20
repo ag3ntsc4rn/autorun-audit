@@ -10,7 +10,7 @@ from typing import Annotated, NoReturn
 import typer
 from rich.console import Console
 
-from autorun_audit import __version__, remote, report
+from autorun_audit import __version__, allowlist, remote, report
 from autorun_audit.models import Finding, Severity
 from autorun_audit.scanners import pyenv
 from autorun_audit.scanners.repo import scan_repo
@@ -46,6 +46,21 @@ OutputOpt = Annotated[
     Path | None,
     typer.Option("--output", "-o", help="Write the report to a file instead of stdout."),
 ]
+AllowlistOpt = Annotated[
+    Path | None,
+    typer.Option(
+        "--allowlist",
+        help="TOML file of reviewed findings to accept. Never loaded unless you pass it.",
+    ),
+]
+WriteAllowlistOpt = Annotated[
+    Path | None,
+    typer.Option(
+        "--write-allowlist",
+        help="Write the current findings to this allowlist file (keeping existing reasons) "
+        "and exit.",
+    ),
+]
 
 
 def _version(value: bool) -> None:
@@ -80,6 +95,8 @@ def repo(
     min_severity: MinSeverityOpt = "low",
     fail_on: FailOnOpt = "high",
     output: OutputOpt = None,
+    allowlist_path: AllowlistOpt = None,
+    write_allowlist: WriteAllowlistOpt = None,
 ) -> None:
     """Scan a checkout, or a remote repository before you clone it, for things that run when
     you open, enter or install it."""
@@ -90,7 +107,17 @@ def repo(
         except remote.CloneError as exc:
             _usage_error(str(exc))
         label = f"{target}@{ref}" if ref else target
-        _emit(findings, fmt, min_severity, fail_on, output, target=label, base=None)
+        _emit(
+            findings,
+            fmt,
+            min_severity,
+            fail_on,
+            output,
+            allowlist_path,
+            write_allowlist,
+            target=label,
+            base=None,
+        )
         return
 
     if ref:
@@ -99,7 +126,17 @@ def repo(
     if not path.is_dir():
         _usage_error(f"{target} is not a directory or a git URL")
     root = path.resolve()
-    _emit(scan_repo(root), fmt, min_severity, fail_on, output, target=target, base=root)
+    _emit(
+        scan_repo(root),
+        fmt,
+        min_severity,
+        fail_on,
+        output,
+        allowlist_path,
+        write_allowlist,
+        target=target,
+        base=root,
+    )
 
 
 @app.command()
@@ -118,6 +155,8 @@ def env(
     min_severity: MinSeverityOpt = "low",
     fail_on: FailOnOpt = "high",
     output: OutputOpt = None,
+    allowlist_path: AllowlistOpt = None,
+    write_allowlist: WriteAllowlistOpt = None,
 ) -> None:
     """Scan a Python environment for code that runs at interpreter startup."""
     if site_dir:
@@ -139,6 +178,8 @@ def env(
         min_severity,
         fail_on,
         output,
+        allowlist_path,
+        write_allowlist,
         target=target,
         base=None,
     )
@@ -158,12 +199,21 @@ def _parse_severity(value: str, *, allow_none: bool = False) -> Severity | None:
         _usage_error(str(exc))
 
 
+def _load_allowlist(path: Path) -> allowlist.Allowlist:
+    try:
+        return allowlist.load(path)
+    except allowlist.AllowlistError as exc:
+        _usage_error(str(exc))
+
+
 def _emit(
     findings: list[Finding],
     fmt: Format,
     min_severity: str,
     fail_on: str,
     output: Path | None,
+    allowlist_path: Path | None,
+    write_allowlist: Path | None,
     *,
     target: str,
     base: Path | None,
@@ -172,18 +222,34 @@ def _emit(
     threshold = _parse_severity(fail_on, allow_none=True)
     shown = [f for f in findings if floor is None or f.severity >= floor]
 
+    if write_allowlist is not None:
+        previous = _load_allowlist(write_allowlist) if write_allowlist.is_file() else None
+        count = allowlist.write(write_allowlist, shown, previous)
+        Console(stderr=True).print(
+            f"Wrote {count} entr{'y' if count == 1 else 'ies'} to {write_allowlist}. "
+            "Review each one and fill in its reason."
+        )
+        return
+
+    result = report.Report(target=target, findings=shown)
+    if allowlist_path is not None:
+        loaded = _load_allowlist(allowlist_path)
+        # Match against every finding, so entries for findings hidden by --min-severity are
+        # not reported as stale, and hidden findings still count towards --fail-on.
+        findings, allowed, result.stale = loaded.split(findings)
+        visible = set(shown)
+        result.findings = [f for f in findings if f in visible]
+        result.allowed = [a for a in allowed if a.finding in visible]
+        result.allowlist = allowlist_path
+
     if fmt is Format.text:
         if output:
             with output.open("w", encoding="utf-8") as fh:
-                report.render_text(shown, Console(file=fh, width=160), target=target)
+                report.render_text(result, Console(file=fh, width=160))
         else:
-            report.render_text(shown, Console(), target=target)
+            report.render_text(result, Console())
     else:
-        text = (
-            report.to_json(shown, target=target)
-            if fmt is Format.json
-            else report.to_sarif(shown, base=base)
-        )
+        text = report.to_json(result) if fmt is Format.json else report.to_sarif(result, base=base)
         if output:
             output.write_text(text + "\n", encoding="utf-8")
         else:

@@ -105,6 +105,8 @@ expected package owns the file unmodified.
 | `--min-severity LEVEL` | `low` | Hide findings below `info`, `low`, `medium`, `high` or `critical`. |
 | `--fail-on LEVEL` | `high` | Exit 1 if any finding is at or above this level. `none` never fails. |
 | `--output FILE` | stdout | Write the report to a file. |
+| `--allowlist FILE` | none | Accept the reviewed findings listed in this file (see below). |
+| `--write-allowlist FILE` | | Write the current findings to an allowlist file and exit. |
 
 Exit codes: `0` when nothing reaches `--fail-on`, `1` when something does, `2` for usage errors.
 
@@ -147,6 +149,36 @@ Exit codes: `0` when nothing reaches `--fail-on`, `1` when something does, `2` f
   commands inside the container, package-owned `.pth` code).
 - **low / info**: needs an extra opt-in such as `direnv allow` or installing hooks, or is
   informational.
+
+## Accepting findings you've reviewed
+
+Some auto-run entries are intended, such as your own formatter hook or a dev container
+`postCreateCommand`. Record them in an allowlist so CI only fails on new or changed ones:
+
+```bash
+autorun-audit repo . --write-allowlist .autorun-audit.toml   # then fill in each reason
+autorun-audit repo . --allowlist .autorun-audit.toml
+```
+
+```toml
+[[allow]]
+rule = "claude.hook"
+path = ".claude/settings.json"
+fingerprint = "sha256:3f9c0a…"
+reason = "Formats files after the agent edits them"
+# high, runs when: Claude Code PostToolUse event
+# $ ruff format
+```
+
+- **Entries are pinned.** The fingerprint covers the rule, file, command and details, and the
+  whole file for file-based findings such as git hooks and `.envrc`, but not the line
+  number. If what runs changes, the finding is reported again and the old entry is listed
+  as stale. Rewording in a new autorun-audit release can also bring findings back for
+  another look.
+- **It is never loaded implicitly.** A repository can't approve its own payload by shipping
+  an allowlist, so the file is only used when you pass `--allowlist`.
+- Re-running `--write-allowlist` keeps the reasons you already wrote. In SARIF output, allowed
+  findings appear as suppressed results with your reason.
 
 ## In CI
 
