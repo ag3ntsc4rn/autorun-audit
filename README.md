@@ -1,8 +1,8 @@
 # autorun-audit
 
 [![CI](https://github.com/ag3ntsc4rn/autorun-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/ag3ntsc4rn/autorun-audit/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/autorun-audit)](https://pypi.org/project/autorun-audit/)
-[![Python](https://img.shields.io/pypi/pyversions/autorun-audit)](https://pypi.org/project/autorun-audit/)
+[![PyPI](https://img.shields.io/pypi/v/autorun-audit?cacheSeconds=3600)](https://pypi.org/project/autorun-audit/)
+[![Python](https://img.shields.io/pypi/pyversions/autorun-audit?cacheSeconds=3600)](https://pypi.org/project/autorun-audit/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/ag3ntsc4rn/autorun-audit/blob/main/LICENSE)
 
 **Find code that runs without you asking.**
