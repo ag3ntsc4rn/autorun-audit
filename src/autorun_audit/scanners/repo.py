@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -68,6 +69,10 @@ GIT_HOOKS = frozenset(
 )
 
 EDITOR_OPEN = "folder opened in VS Code / Cursor / Windsurf (trusted workspace)"
+
+
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8", "surrogateescape")).hexdigest()
 
 
 class _Context:
@@ -664,6 +669,7 @@ def _instruction_files(ctx: _Context) -> None:
         ctx.add(
             Finding(
                 rule="agent.instructions.invisible-unicode",
+                content_digest=_sha(text),
                 severity=escalate(Severity.HIGH, rs),
                 path=ctx.rel(path),
                 line=body.count("\n", 0, matches[0].start()) + 1,
@@ -838,6 +844,7 @@ def _report_hooks(ctx: _Context, directory: Path, severity: Severity, *, active:
         ctx.add(
             Finding(
                 rule="git.hook",
+                content_digest=_sha(text),
                 severity=escalate(severity, rs),
                 path=ctx.rel(path),
                 trigger=f"git {hook}" if active else f"git {hook}, once the hooks are installed",
@@ -906,6 +913,7 @@ def _shell_env(ctx: _Context) -> None:
         ctx.add(
             Finding(
                 rule="direnv.envrc",
+                content_digest=_sha(text),
                 severity=escalate(Severity.LOW, rs),
                 path=".envrc",
                 trigger="cd into the directory with direnv (after `direnv allow`)",
@@ -952,11 +960,13 @@ _PY_TRIGGERS = {
 def _python_files(ctx: _Context) -> None:
     for path in ctx.walk(max_depth=3):
         if path.name in _PY_TRIGGERS:
-            rs = reasons(ctx.read(path) or "")
+            text = ctx.read(path) or ""
+            rs = reasons(text)
             if rs:
                 ctx.add(
                     Finding(
                         rule="python.suspicious-build-file",
+                        content_digest=_sha(text),
                         severity=escalate(Severity.HIGH, rs),
                         path=ctx.rel(path),
                         trigger=_PY_TRIGGERS[path.name],
@@ -970,6 +980,7 @@ def _python_files(ctx: _Context) -> None:
             ctx.add(
                 Finding(
                     rule="python.startup-file-in-repo",
+                    content_digest=_sha(text),
                     severity=escalate(Severity.LOW, rs),
                     path=ctx.rel(path),
                     trigger="Python starts with this directory installed as site-packages",

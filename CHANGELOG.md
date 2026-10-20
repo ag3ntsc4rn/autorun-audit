@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository before you clone it: a hardened shallow clone in a temporary directory that
   runs no hooks, submodules or filters, allows only network protocols, and checks symlinks
   out as plain files. `--ref` picks a branch or tag.
+- Allowlists: `--write-allowlist FILE` records the current findings and `--allowlist FILE`
+  accepts them, pinned by a fingerprint of what runs (not the line; the whole file for
+  findings such as git hooks), so changed entries are
+  reported again and unmatched entries are listed as stale. Allowlists are never loaded
+  implicitly. JSON output gains `fingerprint`, `allowed` and `stale_allowlist_entries`; SARIF
+  output includes allowed findings as suppressed results and adds `partialFingerprints`.
+
+### Security
+
+- Text output escapes control and invisible characters from scanned files, so a crafted
+  repository can't inject terminal escape sequences that hide or rewrite lines of the report.
 
 ## [0.1.1] - 2026-10-20
 

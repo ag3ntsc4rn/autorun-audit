@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import enum
+import hashlib
+import json
 from dataclasses import dataclass
 
 
@@ -37,13 +39,33 @@ class Finding:
     command: str | None = None
     owner: str | None = None
     reasons: tuple[str, ...] = ()
+    # SHA-256 of the whole source file, for findings that come from a file rather than one
+    # command; part of the fingerprint so any edit to the file is noticed.
+    content_digest: str | None = None
 
     @property
     def location(self) -> str:
         return f"{self.path}:{self.line}" if self.line else self.path
 
+    @property
+    def fingerprint(self) -> str:
+        """Identifies what runs, not where: stable when lines move, changes when content does."""
+        material = json.dumps(
+            [
+                self.rule,
+                self.path,
+                self.command or "",
+                self.message,
+                sorted(self.reasons),
+                self.content_digest or "",
+            ],
+            ensure_ascii=False,
+        )
+        return "sha256:" + hashlib.sha256(material.encode()).hexdigest()[:32]
+
     def to_dict(self) -> dict[str, object]:
         return {
+            "fingerprint": self.fingerprint,
             "rule": self.rule,
             "severity": self.severity.label,
             "path": self.path,
@@ -53,6 +75,7 @@ class Finding:
             "command": self.command,
             "owner": self.owner,
             "reasons": list(self.reasons),
+            "content_sha256": self.content_digest,
         }
 
 
