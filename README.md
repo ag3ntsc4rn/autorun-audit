@@ -155,7 +155,7 @@ GitHub Actions with code scanning:
 
 ```yaml
 - repo: https://github.com/ag3ntsc4rn/autorun-audit
-  rev: v0.1.0
+  rev: v0.1.1
   hooks:
     - id: autorun-audit
 ```
