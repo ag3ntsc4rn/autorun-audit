@@ -219,7 +219,7 @@ uvx autorun-audit repo . --format sarif --output autorun.sarif --fail-on high
 
 ```yaml
 - repo: https://github.com/ag3ntsc4rn/autorun-audit
-  rev: v0.1.1
+  rev: v0.2.0
   hooks:
     - id: autorun-audit
 ```
