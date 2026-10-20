@@ -1,0 +1,29 @@
+name: New detector
+description: Something else that runs code automatically and should be covered.
+title: "detector: "
+labels: ["enhancement", "detector"]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool or file
+      placeholder: "JetBrains startup tasks in .idea/"
+    validations:
+      required: true
+  - type: textarea
+    id: trigger
+    attributes:
+      label: When does it run, and with or without a prompt?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Minimal defanged example
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Documentation or incident write-ups

@@ -1,0 +1,34 @@
+name: False positive
+description: A finding that flags something legitimate.
+title: "fp: "
+labels: ["false-positive"]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      description: The id shown in brackets in table output, or "rule" in JSON output.
+      placeholder: "pth.import-line"
+    validations:
+      required: true
+  - type: textarea
+    id: content
+    attributes:
+      label: The flagged file content
+      description: The relevant lines, and which tool or package wrote them.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it legitimate?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: autorun-audit version
+      placeholder: "0.1.0"
+    validations:
+      required: true

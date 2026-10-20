@@ -1,0 +1,8 @@
+# Lets other repositories run autorun-audit from their .pre-commit-config.yaml.
+- id: autorun-audit
+  name: autorun-audit
+  description: Fail if the repository contains files that run code when it is opened or installed.
+  entry: autorun-audit repo .
+  language: python
+  pass_filenames: false
+  always_run: true
