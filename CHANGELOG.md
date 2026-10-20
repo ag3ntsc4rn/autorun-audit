@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-20
+
 ### Fixed
 
 - The `CRITICAL` label is readable in every terminal theme. It was white on the theme's red,
@@ -64,7 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Text, JSON and SARIF 2.1.0 output; `--min-severity`, `--fail-on` and `--output`.
 - A pre-commit hook definition.
 
-[Unreleased]: https://github.com/ag3ntsc4rn/autorun-audit/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ag3ntsc4rn/autorun-audit/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/ag3ntsc4rn/autorun-audit/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ag3ntsc4rn/autorun-audit/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ag3ntsc4rn/autorun-audit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ag3ntsc4rn/autorun-audit/releases/tag/v0.1.0
