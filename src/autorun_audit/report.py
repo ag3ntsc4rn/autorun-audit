@@ -17,7 +17,8 @@ from autorun_audit.models import Finding, Severity
 TOOL_URI = "https://github.com/ag3ntsc4rn/autorun-audit"
 
 _STYLES = {
-    Severity.CRITICAL: "bold white on red",
+    # Fixed 256-colour reds: theme reds are often pale, which made white text unreadable.
+    Severity.CRITICAL: "bold bright_white on red3",
     Severity.HIGH: "bold red",
     Severity.MEDIUM: "yellow",
     Severity.LOW: "cyan",
@@ -39,12 +40,26 @@ def safe(value: str) -> str:
     return "".join(ch if ch.isprintable() or ch == "\n" else f"\\u{ord(ch):04x}" for ch in value)
 
 
+def _print_indented(console: Console, body: Text, indent: int = 2) -> None:
+    """Print ``body`` indented, keeping wrapped lines indented too, with no trailing padding."""
+    options = console.options.update_width(max(console.width - indent, 20))
+    for line in console.render_lines(body, options, pad=False):
+        rendered = Text.assemble(" " * indent, *((seg.text, seg.style or "") for seg in line))
+        rendered.rstrip()
+        console.print(rendered, soft_wrap=True)
+    console.print()
+
+
 def render_text(report: Report, console: Console) -> None:
     findings = report.findings
     if not findings:
-        console.print(Text.assemble(("Nothing auto-runs in ", "green"), safe(report.target)))
+        console.print(
+            Text.assemble(("Nothing auto-runs in ", "green"), safe(report.target)), soft_wrap=True
+        )
     else:
-        console.print(Text.assemble(("autorun-audit", "bold"), f" {safe(report.target)}\n"))
+        console.print(
+            Text.assemble(("autorun-audit", "bold"), f" {safe(report.target)}\n"), soft_wrap=True
+        )
     for f in findings:
         head = Text.assemble(
             (f" {f.severity.label.upper()} ", _STYLES[f.severity]),
@@ -52,18 +67,18 @@ def render_text(report: Report, console: Console) -> None:
             (safe(f.location), "bold"),
             (f"  [{f.rule}]", "dim"),
         )
-        console.print(head)
+        console.print(head, soft_wrap=True)
         body = Text()
-        body.append("  runs when: ", style="dim")
+        body.append("runs when: ", style="dim")
         body.append(safe(f.trigger))
-        body.append(f"\n  {safe(f.message)}")
+        body.append(f"\n{safe(f.message)}")
         if f.owner:
-            body.append(f"\n  owner: {safe(f.owner)}", style="dim")
+            body.append(f"\nowner: {safe(f.owner)}", style="dim")
         if f.command:
-            body.append(f"\n  $ {safe(f.command)}", style="bold")
+            body.append(f"\n$ {safe(f.command)}", style="bold")
         for reason in f.reasons:
-            body.append(f"\n  ! {safe(reason)}", style="red")
-        console.print(body, end="\n\n", soft_wrap=False)
+            body.append(f"\n! {safe(reason)}", style="red")
+        _print_indented(console, body)
     if findings:
         counts = Counter(f.severity for f in findings)
         summary = ", ".join(f"{counts[s]} {s.label}" for s in sorted(counts, reverse=True))
