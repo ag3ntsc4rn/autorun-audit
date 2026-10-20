@@ -31,7 +31,9 @@ def install(site: Path, dist: str, files: dict[str, str]) -> None:
     rows = []
     for rel, content in files.items():
         (site / rel).parent.mkdir(parents=True, exist_ok=True)
-        (site / rel).write_text(content, encoding="utf-8")
+        # Bytes, as installers write them: text mode would turn \n into \r\n on Windows
+        # and break the RECORD hash.
+        (site / rel).write_bytes(content.encode())
         rows.append(f"{rel},{record_hash(content)},{len(content)}")
     info = site / f"{dist}.dist-info"
     info.mkdir()
