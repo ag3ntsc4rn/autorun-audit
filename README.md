@@ -12,8 +12,8 @@ enter its directory, install it, start an AI agent in it, or simply start Python
 out the entries that look like payloads.
 
 ```console
-$ uvx autorun-audit repo suspicious-repo
-autorun-audit suspicious-repo
+$ uvx autorun-audit repo https://github.com/example/suspicious-repo
+autorun-audit https://github.com/example/suspicious-repo
 
  CRITICAL  .vscode/tasks.json:5  [vscode.task.folder-open]
   runs when: folder opened in VS Code / Cursor / Windsurf (trusted workspace)
@@ -65,13 +65,22 @@ Requires Python 3.11 or newer. It runs on Linux, macOS and Windows.
 
 ## Usage
 
-### Before you open a repository
+### Before you clone or open a repository
 
 ```bash
-git clone https://github.com/someone/project && autorun-audit repo project
+autorun-audit repo https://github.com/someone/project            # scan without keeping a clone
+autorun-audit repo git@github.com:someone/project.git --ref dev  # a branch or tag
+autorun-audit repo ./project                                     # a checkout you already have
 ```
 
-Run this before opening a cloned repository in your editor or starting an agent in it.
+With a URL, `autorun-audit` makes a shallow clone in a temporary directory, scans it and
+deletes it. The clone is hardened so that nothing from the repository can run during it:
+no hooks (including your global ones), no submodules, no Git LFS or other filters, only
+`https` and `ssh`, and symlinks are checked out as plain files so they can't point the
+scanner at files outside the clone. Private repositories work with your usual git
+credentials.
+
+Run this before opening a repository in your editor or starting an agent in it.
 
 ### Audit a Python environment
 
