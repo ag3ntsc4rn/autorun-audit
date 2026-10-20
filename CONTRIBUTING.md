@@ -61,8 +61,8 @@ characters, so reviewers can see them.
   `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`, `build:`. Use `!` or a
   `BREAKING CHANGE:` footer for breaking changes. New rule ids and changes to JSON or SARIF
   output count as user-visible changes.
-- Keep pull requests small and focused. They are squash-merged, so the PR title becomes the
-  commit message on `main` and should also follow Conventional Commits.
+- Keep pull requests small and focused. PR titles also follow Conventional Commits, since a
+  squash merge uses the title as the commit message on `main`.
 - Add an entry under `Unreleased` in [CHANGELOG.md](CHANGELOG.md) for user-visible changes.
 
 ## Signing off your commits
@@ -85,6 +85,7 @@ branch.
 1. Bump `version` in `pyproject.toml` and `__version__` in `src/autorun_audit/__init__.py`,
    and move the `Unreleased` changelog entries under the new version, in a
    `chore(release): X.Y.Z` pull request.
-2. After it merges, tag `main` with `vX.Y.Z` and push the tag. The release workflow checks
+2. After it merges, tag `main` with `vX.Y.Z` and push the tag. The tag also versions the
+   GitHub Action (`uses: ag3ntsc4rn/autorun-audit@vX.Y.Z`). The release workflow checks
    that the tag matches the version, runs the tests, builds, and publishes to PyPI with
    Trusted Publishing once the `pypi` environment deployment is approved.

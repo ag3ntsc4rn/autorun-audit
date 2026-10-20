@@ -8,7 +8,7 @@
 
 ## Checklist
 
-- [ ] PR title follows [Conventional Commits](https://www.conventionalcommits.org) (it becomes the squash-merge commit message)
+- [ ] PR title follows [Conventional Commits](https://www.conventionalcommits.org) (a squash merge uses it as the commit message)
 - [ ] Tests added or updated, and `uv run pytest` passes
 - [ ] `uv run ruff check`, `uv run ruff format --check` and `uv run mypy` pass
 - [ ] `CHANGELOG.md` updated under "Unreleased" for user-visible changes
