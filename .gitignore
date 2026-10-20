@@ -22,8 +22,8 @@ coverage.xml
 .env.*
 
 # IDEs
-.vscode/
-.idea/
+/.vscode/
+/.idea/
 *.swp
 *~
 
