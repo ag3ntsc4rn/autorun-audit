@@ -182,14 +182,37 @@ reason = "Formats files after the agent edits them"
 
 ## In CI
 
-GitHub Actions with code scanning:
+### GitHub Action
 
 ```yaml
-- run: uvx autorun-audit repo . --format sarif --output autorun.sarif --fail-on critical
-- uses: github/codeql-action/upload-sarif@v4
-  if: always()
-  with:
-    sarif_file: autorun.sarif
+permissions:
+  contents: read
+  security-events: write   # only needed for the code scanning upload
+
+steps:
+  - uses: actions/checkout@v5
+  - uses: ag3ntsc4rn/autorun-audit@v0.2.0
+    with:
+      allowlist: .autorun-audit.toml   # optional
+```
+
+The action prints the report to the log and the job summary, uploads SARIF to code
+scanning, and fails the job when a finding reaches `fail-on`. It runs the scanner code at
+the tag you reference, not the newest PyPI release. For supply-chain hygiene, pin it to a
+full commit SHA as you would any action.
+
+| Input | Default | Meaning |
+|---|---|---|
+| `path` | `.` | Directory to scan, or a git URL. |
+| `fail-on` | `high` | Fail at or above this severity, or `none`. |
+| `min-severity` | `low` | Hide findings below this severity. |
+| `allowlist` | | Allowlist file of reviewed findings. |
+| `upload-sarif` | `true` | Upload to code scanning (needs `security-events: write`). |
+
+### Anywhere else
+
+```bash
+uvx autorun-audit repo . --format sarif --output autorun.sarif --fail-on high
 ```
 
 [pre-commit](https://pre-commit.com):

@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reported again and unmatched entries are listed as stale. Allowlists are never loaded
   implicitly. JSON output gains `fingerprint`, `allowed` and `stale_allowlist_entries`; SARIF
   output includes allowed findings as suppressed results and adds `partialFingerprints`.
+- A GitHub Action (`uses: ag3ntsc4rn/autorun-audit@v0.2.0`) that writes the report to the log
+  and job summary, uploads SARIF to code scanning and fails on `fail-on`. It runs the
+  scanner from its own ref rather than the newest PyPI release.
 
 ### Security
 

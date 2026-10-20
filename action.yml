@@ -1,0 +1,86 @@
+name: autorun-audit
+description: Fail when a repository contains files that run code on open, install or agent start (VS Code tasks, agent hooks, MCP servers, dev containers, git hooks).
+author: Ag3nt Sc4rn
+branding:
+  icon: shield
+  color: red
+
+inputs:
+  path:
+    description: Directory to scan, relative to the workspace, or a git URL.
+    default: "."
+  fail-on:
+    description: Fail when a finding is at or above this severity (info, low, medium, high, critical) or "none".
+    default: high
+  min-severity:
+    description: Hide findings below this severity in the log and SARIF.
+    default: low
+  allowlist:
+    description: Path to an allowlist file of reviewed findings (see the README). Empty for none.
+    default: ""
+  upload-sarif:
+    description: Upload results to GitHub code scanning. Needs `security-events: write`.
+    default: "true"
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF report.
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+    # Inputs reach the shell only through environment variables, never through ${{ }}
+    # expressions inside the script, so they can't inject shell commands.
+    - id: scan
+      name: Scan
+      shell: bash
+      env:
+        TARGET: ${{ inputs.path }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        MIN_SEVERITY: ${{ inputs.min-severity }}
+        ALLOWLIST: ${{ inputs.allowlist }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -uo pipefail
+        args=(repo "$TARGET" --min-severity "$MIN_SEVERITY")
+        if [ -n "$ALLOWLIST" ]; then
+          args+=(--allowlist "$ALLOWLIST")
+        fi
+        # Run the code at this action's own ref, not whatever is newest on PyPI.
+        audit() { uvx --quiet --from "$ACTION_PATH" autorun-audit "${args[@]}" "$@"; }
+
+        sarif="$RUNNER_TEMP/autorun-audit.sarif"
+        if audit --format sarif --output "$sarif" --fail-on none; then
+          echo "sarif-file=$sarif" >> "$GITHUB_OUTPUT"
+        fi
+
+        COLUMNS=120 audit --fail-on "$FAIL_ON" | tee "$RUNNER_TEMP/autorun-audit.txt"
+        status=${PIPESTATUS[0]}
+        {
+          echo "### autorun-audit"
+          echo '```'
+          cat "$RUNNER_TEMP/autorun-audit.txt"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+
+    - name: Upload SARIF
+      if: always() && inputs.upload-sarif == 'true' && steps.scan.outputs.sarif-file != ''
+      uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif-file }}
+        category: autorun-audit
+
+    - name: Result
+      shell: bash
+      env:
+        STATUS: ${{ steps.scan.outputs.status }}
+      run: |
+        case "$STATUS" in
+          0) echo "No findings at or above the fail-on level." ;;
+          1) echo "::error::autorun-audit found code that runs automatically; see the log above."; exit 1 ;;
+          *) echo "::error::autorun-audit could not run (exit ${STATUS:-unknown})"; exit 2 ;;
+        esac
