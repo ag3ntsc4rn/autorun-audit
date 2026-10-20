@@ -89,3 +89,18 @@ def test_env_site_dir(tmp_path: Path) -> None:
 def test_env_bad_python(tmp_path: Path) -> None:
     result = runner.invoke(app, ["env", "--python", str(tmp_path / "nope")])
     assert result.exit_code == 2
+
+
+def test_text_output_wraps_with_indent_and_no_trailing_spaces(tmp_path: Path) -> None:
+    (tmp_path / ".vscode").mkdir()
+    (tmp_path / ".vscode/tasks.json").write_text(TASK, encoding="utf-8")
+    result = CliRunner().invoke(
+        app, ["repo", str(tmp_path), "--fail-on", "none"], env={"COLUMNS": "50"}
+    )
+    lines = result.output.splitlines()
+    assert not [line for line in lines if line.endswith(" ")]
+    body = lines[
+        lines.index(next(line for line in lines if "CRITICAL" in line or "HIGH" in line)) + 1 :
+    ]
+    assert body[0].startswith("  runs when:")
+    assert body[1].startswith("  ")  # the wrapped continuation stays indented

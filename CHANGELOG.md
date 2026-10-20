@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The `CRITICAL` label is readable in every terminal theme. It was white on the theme's red,
+  which many themes render as pale pink.
+- In narrow terminals, wrapped lines of a finding stay indented under its heading, and text
+  output no longer ends lines with padding spaces.
+
 ## [0.2.0] - 2026-10-20
 
 ### Added
