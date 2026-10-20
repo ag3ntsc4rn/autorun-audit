@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Package metadata now lists the supported Python versions (3.11 to 3.14), so PyPI and
+  badges show them instead of just "3".
+- Ships a `py.typed` marker, so type checkers use the package's type hints.
+
 ## [0.1.0] - 2026-10-20
 
 ### Added
