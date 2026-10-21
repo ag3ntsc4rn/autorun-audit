@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Findings now say **what they can do**: run shell commands, use the network, write or delete
+  files, read credentials, set themselves up to run again, or use admin rights, with the
+  evidence for each. Repository scripts that a hook, task, MCP server, dev container or npm
+  script calls are read and analyzed too (two levels deep, never executed, never outside the
+  repository). Reading credentials plus network access, or network access plus persistence,
+  is critical, and `sudo` raises a finding to at least high. Prompted by feedback that "a
+  hook exists" isn't enough without saying what the hook can do.
+- JSON output adds `capabilities`, `evidence`, `analyzed_files` and `programs`; SARIF
+  properties add `capabilities` and `analyzedFiles`.
+
+### Changed
+
+- Commands are stored in full in JSON and SARIF; only the text output shortens long ones. As a
+  result, fingerprints of commands longer than 400 characters change, and so do fingerprints of
+  findings whose scripts are now followed (editing such a script now brings the finding back).
+  Re-run `--write-allowlist` if an allowlist stops matching.
+
 ## [0.2.1] - 2026-10-20
 
 ### Fixed
