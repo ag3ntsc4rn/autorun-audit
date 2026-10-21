@@ -150,7 +150,10 @@ def test_files_in_git_dir_are_not_followed(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "content", [b"\x7fELF\x00\x00binary", b"#!/bin/sh\n" + b"#" * (MAX_SCRIPT_BYTES + 10)]
+    "content",
+    [b"\x7fELF\x00\x00binary", b"#!/bin/sh\n" + b"#" * (MAX_SCRIPT_BYTES + 10)],
+    # Short ids: pytest puts the test id in an environment variable, which Windows caps at 32K.
+    ids=["binary", "too-large"],
 )
 def test_binary_and_huge_files_are_flagged_not_read(tmp_path: Path, content: bytes) -> None:
     write(tmp_path, "tools/run", content)
