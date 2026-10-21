@@ -17,8 +17,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from autorun_audit import capabilities
 from autorun_audit.models import Finding, Severity, escalate
-from autorun_audit.scanners.common import truncate
 from autorun_audit.suspicious import reasons
 
 STARTUP = "every time this Python interpreter starts"
@@ -210,7 +210,20 @@ def scan_environment(env: Environment) -> list[Finding]:
             path = directory / name
             if path.is_file():
                 findings.append(_scan_customize(path, _record_owners(directory)))
+    findings = [_with_capabilities(f) for f in findings]
     return sorted(findings, key=lambda f: (-f.severity, f.path, f.line or 0))
+
+
+def _with_capabilities(finding: Finding) -> Finding:
+    """What startup code can do. Python text, so shell-only checks are skipped."""
+    if finding.rule == "pth.import-line" and finding.command:
+        return capabilities.enrich(
+            finding, capabilities.analyze(finding.command, None, shell=False)
+        )
+    if finding.rule == "python.customize-module":
+        text = _read(Path(finding.path))
+        return capabilities.enrich(finding, capabilities.analyze(text, None, shell=False))
+    return finding
 
 
 def _read(path: Path) -> str:
@@ -253,7 +266,7 @@ def _scan_pth(path: Path, owners: dict[Path, _Owner], *, has_start: bool) -> lis
                     line=lineno,
                     trigger=STARTUP,
                     message=f"Recognised {known}.",
-                    command=truncate(raw),
+                    command=raw,
                     owner=owner,
                 )
             )
@@ -276,7 +289,7 @@ def _scan_pth(path: Path, owners: dict[Path, _Owner], *, has_start: bool) -> lis
                 line=lineno,
                 trigger=STARTUP,
                 message="Executable .pth line; " + "; ".join(notes) + ".",
-                command=truncate(raw),
+                command=raw,
                 owner=owner,
                 reasons=rs,
             )
@@ -315,7 +328,7 @@ def _scan_start(path: Path, owners: dict[Path, _Owner]) -> list[Finding]:
                     line=lineno,
                     trigger=STARTUP,
                     message="Not a valid pkg.mod:callable entry point; Python 3.15+ ignores it.",
-                    command=truncate(raw),
+                    command=raw,
                     owner=owner,
                 )
             )

@@ -42,6 +42,12 @@ class Finding:
     # SHA-256 of the whole source file, for findings that come from a file rather than one
     # command; part of the fingerprint so any edit to the file is noticed.
     content_digest: str | None = None
+    # What it can do (see capabilities.py): labels, (label, match, file, line) evidence,
+    # repository scripts that were followed as (path, sha256), and external programs it starts.
+    capabilities: tuple[str, ...] = ()
+    evidence: tuple[tuple[str, str, str | None, int | None], ...] = ()
+    analyzed_files: tuple[tuple[str, str], ...] = ()
+    programs: tuple[str, ...] = ()
 
     @property
     def location(self) -> str:
@@ -58,6 +64,9 @@ class Finding:
                 self.message,
                 sorted(self.reasons),
                 self.content_digest or "",
+                # Followed scripts are part of what runs: editing one must invalidate an
+                # allowlist entry. Only added when present, so other fingerprints don't change.
+                *([sorted(self.analyzed_files)] if self.analyzed_files else []),
             ],
             ensure_ascii=False,
         )
@@ -76,6 +85,13 @@ class Finding:
             "owner": self.owner,
             "reasons": list(self.reasons),
             "content_sha256": self.content_digest,
+            "capabilities": list(self.capabilities),
+            "evidence": [
+                {"capability": c, "match": m, "file": f, "line": ln}
+                for c, m, f, ln in self.evidence
+            ],
+            "analyzed_files": [{"path": p, "sha256": s} for p, s in self.analyzed_files],
+            "programs": list(self.programs),
         }
 
 

@@ -12,7 +12,9 @@ from rich.text import Text
 
 from autorun_audit import __version__
 from autorun_audit.allowlist import Allowed, Entry
+from autorun_audit.capabilities import Capability
 from autorun_audit.models import Finding, Severity
+from autorun_audit.scanners.common import truncate
 
 TOOL_URI = "https://github.com/ag3ntsc4rn/autorun-audit"
 
@@ -38,6 +40,18 @@ class Report:
 def safe(value: str) -> str:
     """Make scanned content safe to print: no escape sequences, no invisible characters."""
     return "".join(ch if ch.isprintable() or ch == "\n" else f"\\u{ord(ch):04x}" for ch in value)
+
+
+def describe_capabilities(f: Finding) -> str:
+    """e.g. "run shell commands · use the network · read credentials (~/.ssh, ~/.aws)"."""
+    parts = []
+    for label in f.capabilities:
+        text = Capability(label).description
+        if label == Capability.CREDENTIALS:
+            matches = list(dict.fromkeys(m for c, m, _, _ in f.evidence if c == label))
+            text += f" ({', '.join(matches[:3])}{', …' if len(matches) > 3 else ''})"
+        parts.append(text)
+    return " · ".join(parts)
 
 
 def _print_indented(console: Console, body: Text, indent: int = 2) -> None:
@@ -75,7 +89,16 @@ def render_text(report: Report, console: Console) -> None:
         if f.owner:
             body.append(f"\nowner: {safe(f.owner)}", style="dim")
         if f.command:
-            body.append(f"\n$ {safe(f.command)}", style="bold")
+            body.append(f"\n$ {safe(truncate(f.command))}", style="bold")
+        if f.capabilities:
+            body.append("\ncan: ", style="dim")
+            body.append(safe(describe_capabilities(f)), style="magenta")
+        if f.analyzed_files:
+            body.append("\ninspected: ", style="dim")
+            body.append(safe(", ".join(p for p, _ in f.analyzed_files)))
+        if f.programs:
+            body.append("\nstarts: ", style="dim")
+            body.append(safe(", ".join(f.programs)))
         for reason in f.reasons:
             body.append(f"\n! {safe(reason)}", style="red")
         _print_indented(console, body)
@@ -136,6 +159,8 @@ def _sarif_result(f: Finding, base: Path | None) -> dict[str, object]:
     text = f.message
     if f.command:
         text += f" Command: {f.command}"
+    if f.capabilities:
+        text += f" Can: {describe_capabilities(f)}."
     if f.reasons:
         text += " Suspicious: " + "; ".join(f.reasons) + "."
     return {
@@ -151,7 +176,13 @@ def _sarif_result(f: Finding, base: Path | None) -> dict[str, object]:
             }
         ],
         "partialFingerprints": {"autorunAudit/v1": f.fingerprint},
-        "properties": {"severity": f.severity.label, "trigger": f.trigger, "owner": f.owner},
+        "properties": {
+            "severity": f.severity.label,
+            "trigger": f.trigger,
+            "owner": f.owner,
+            "capabilities": list(f.capabilities),
+            "analyzedFiles": [p for p, _ in f.analyzed_files],
+        },
     }
 
 
