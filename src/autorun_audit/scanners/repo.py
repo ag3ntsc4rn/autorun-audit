@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
-from autorun_audit import capabilities, jsonc
+from autorun_audit import capabilities, jsonc, prompts
 from autorun_audit.models import Finding, Severity, escalate
 from autorun_audit.scanners.common import (
     dangerous_env_keys,
@@ -68,7 +68,7 @@ GIT_HOOKS = frozenset(
     }
 )
 
-EDITOR_OPEN = "folder opened in VS Code / Cursor / Windsurf (trusted workspace)"
+EDITOR_OPEN = "folder opened in VS Code / Cursor / Windsurf"
 
 
 def _sha(text: str) -> str:
@@ -126,7 +126,7 @@ def scan_repo(root: Path) -> list[Finding]:
     ctx = _Context(root.resolve())
     for detector in DETECTORS:
         detector(ctx)
-    findings = [_with_capabilities(ctx.root, f) for f in ctx.findings]
+    findings = [prompts.annotate(_with_capabilities(ctx.root, f)) for f in ctx.findings]
     return sorted(findings, key=lambda f: (-f.severity, f.path, f.line or 0, f.rule))
 
 
