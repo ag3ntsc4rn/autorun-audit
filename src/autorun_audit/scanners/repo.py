@@ -452,6 +452,9 @@ def _claude_settings(ctx: _Context) -> None:
 _HOOK_CONFIGS = (
     (".cursor/hooks.json", "Cursor"),
     (".gemini/settings.json", "Gemini CLI"),
+    # Windsurf became Devin Desktop; it reads the legacy file only when .devin/hooks.json is
+    # absent, but older Windsurf builds still read it, so both are reported.
+    (".devin/hooks.json", "Devin Desktop"),
     (".windsurf/hooks.json", "Windsurf"),
 )
 
@@ -490,6 +493,11 @@ _MCP_CONFIGS = (
     (".roo/mcp.json", "mcpServers", "Roo Code"),
     (".kiro/settings/mcp.json", "mcpServers", "Kiro"),
     (".amazonq/mcp.json", "mcpServers", "Amazon Q"),
+    (".devin/mcp_config.json", "mcpServers", "Devin"),
+    # Gitignored by default, but read if a repository commits it.
+    (".devin/mcp_config.local.json", "mcpServers", "Devin"),
+    # Older Devin versions; migrated on startup, which still starts its servers.
+    (".devin/config.json", "mcpServers", "Devin"),
 )
 
 _DOCKER_VALUE_FLAGS = frozenset(
