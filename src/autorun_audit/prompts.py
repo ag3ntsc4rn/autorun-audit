@@ -124,11 +124,23 @@ _AGENT_HOOKS: dict[str, PromptInfo] = {
         ("Gemini CLI: after you trust the folder, it warns once that project hooks will run",),
         (_GEMINI_SKIP,),
     ),
+    ".devin/hooks.json": PromptInfo(
+        Prompt.FOLDER_TRUST,
+        ("Devin Desktop: hooks don't run in Restricted Mode",),
+    ),
     ".windsurf/hooks.json": PromptInfo(
         Prompt.FOLDER_TRUST,
-        ("Windsurf (Devin Desktop): hooks don't run in Restricted Mode",),
+        (
+            "Windsurf, Devin Desktop: hooks don't run in Restricted Mode; Devin Desktop reads "
+            "this file only when .devin/hooks.json is absent",
+        ),
     ),
 }
+
+_DEVIN_MCP = PromptInfo(
+    Prompt.NONE,
+    ("Devin: documents no prompt before starting project servers; tool calls ask by default",),
+)
 
 _MCP: dict[str, PromptInfo] = {
     ".mcp.json": PromptInfo(
@@ -166,6 +178,9 @@ _MCP: dict[str, PromptInfo] = {
             "changes (agentic-1.65.0 and later; older builds don't ask)",
         ),
     ),
+    ".devin/mcp_config.json": _DEVIN_MCP,
+    ".devin/mcp_config.local.json": _DEVIN_MCP,
+    ".devin/config.json": _DEVIN_MCP,
 }
 
 _MISE_HOOK = re.compile(r"^mise (\S+) hook")

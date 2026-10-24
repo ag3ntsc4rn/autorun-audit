@@ -154,8 +154,8 @@ Exit codes: `0` when nothing reaches `--fail-on`, `1` when something does, `2` f
 | `.vscode/tasks.json`, `*.code-workspace` tasks with `runOn: folderOpen` | the folder is opened in VS Code, Cursor or Windsurf | `vscode.task.folder-open` |
 | `.vscode/settings.json`: `task.allowAutomaticTasks`, terminal shell/profile/env overrides, `*.path` settings pointing into the repo | folder open, a terminal opens, an extension starts | `vscode.settings.*` |
 | `.claude/settings*.json`: hooks, status line, helper commands, MCP auto-approval, `env`, plugins, blanket `Bash` permission | Claude Code events | `claude.*` |
-| `.cursor/hooks.json`, `.gemini/settings.json`, `.windsurf/hooks.json` hooks | agent events | `agent.hook` |
-| `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.gemini/settings.json`, `.roo/mcp.json`, `.kiro/…`, `.amazonq/…`: local servers, unpinned `npx`/`uvx`/`docker` launches, repo binaries, dangerous `env` | an agent session starts | `mcp.*` |
+| `.cursor/hooks.json`, `.gemini/settings.json`, `.devin/hooks.json` (Devin Desktop, formerly Windsurf), `.windsurf/hooks.json` hooks | agent events | `agent.hook` |
+| `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.gemini/settings.json`, `.roo/mcp.json`, `.kiro/…`, `.amazonq/…`, `.devin/mcp_config.json`: local servers, unpinned `npx`/`uvx`/`docker` launches, repo binaries, dangerous `env` | an agent session starts | `mcp.*` |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/`, Copilot instructions, Claude commands, agents and skills: invisible Unicode, with hidden tag text decoded | an agent reads its instructions | `agent.instructions.invisible-unicode` |
 | `devcontainer.json`: lifecycle commands (`initializeCommand` runs on the **host**), host access, third-party features | a dev container is opened or built | `devcontainer.*` |
 | `.git/hooks`, `core.hooksPath`, `.githooks/`, `.husky/` | git operations | `git.*` |

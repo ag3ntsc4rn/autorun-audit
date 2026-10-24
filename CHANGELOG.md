@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JSON output adds `prompt`, `prompt_notes` and `prompt_skipped_when`; SARIF properties add
   `prompt`, `promptNotes` and `promptSkippedWhen`. They aren't part of the fingerprint, so
   existing allowlists keep matching.
+- Devin Desktop, which Windsurf became in June 2026: project hooks in `.devin/hooks.json`
+  and MCP servers in `.devin/mcp_config.json`, `.devin/mcp_config.local.json` and the legacy
+  `.devin/config.json`. `.windsurf/hooks.json` is still scanned for older Windsurf builds.
 
 ### Changed
 

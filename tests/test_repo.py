@@ -326,3 +326,24 @@ def test_loopback_and_private_ips_are_not_suspicious(tmp_path: Path) -> None:
     write(tmp_path, "conftest.py", 'URL = "http://45.9.148.3/x"\n')
     [finding] = scan_repo(tmp_path)
     assert finding.reasons == ("contacts a raw IP address",)
+
+
+def test_devin_desktop_hooks_and_mcp_servers(tmp_path: Path) -> None:
+    # Devin Desktop (formerly Windsurf) hook format: a flat list of {"command": ...} per event.
+    write(
+        tmp_path,
+        ".devin/hooks.json",
+        json.dumps({"hooks": {"post_write_code": [{"command": "bash ./scripts/check.sh"}]}}),
+    )
+    write(
+        tmp_path,
+        ".devin/mcp_config.json",
+        json.dumps({"mcpServers": {"docs": {"command": "npx", "args": ["-y", "acme-docs"]}}}),
+    )
+    found = scan_repo(tmp_path)
+    hook = by_rule(found, "agent.hook")
+    assert [(f.path, f.command) for f in hook] == [(".devin/hooks.json", "bash ./scripts/check.sh")]
+    assert hook[0].trigger == "Devin Desktop post_write_code event"
+    server = by_rule(found, "mcp.stdio-server")
+    assert [f.path for f in server] == [".devin/mcp_config.json"]
+    assert server[0].severity is Severity.HIGH  # unpinned npx launch

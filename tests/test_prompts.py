@@ -63,6 +63,7 @@ def test_claude_hook_needs_trust_except_in_print_mode(tmp_path: Path) -> None:
     [
         (".cursor/hooks.json", Prompt.NONE),
         (".gemini/settings.json", Prompt.FOLDER_TRUST),
+        (".devin/hooks.json", Prompt.FOLDER_TRUST),
         (".windsurf/hooks.json", Prompt.FOLDER_TRUST),
     ],
 )
@@ -83,6 +84,9 @@ def test_agent_hook_prompt_depends_on_the_client(
         (".roo/mcp.json", "mcpServers", Prompt.NONE),
         (".kiro/settings/mcp.json", "mcpServers", Prompt.NONE),
         (".amazonq/mcp.json", "mcpServers", Prompt.PER_ITEM),
+        (".devin/mcp_config.json", "mcpServers", Prompt.NONE),
+        (".devin/mcp_config.local.json", "mcpServers", Prompt.NONE),
+        (".devin/config.json", "mcpServers", Prompt.NONE),
     ],
 )
 def test_mcp_server_prompt_depends_on_the_config_file(
