@@ -89,8 +89,10 @@ def test_code_workspace_tasks_and_settings(tmp_path: Path) -> None:
             }
         ),
     )
-    rules = {f.rule for f in scan_repo(tmp_path)}
-    assert rules == {"vscode.task.folder-open", "vscode.settings.auto-tasks"}
+    found = {f.rule: f for f in scan_repo(tmp_path)}
+    assert set(found) == {"vscode.task.folder-open", "vscode.settings.auto-tasks"}
+    # VS Code 1.109+ and Windsurf ignore the workspace value; Cursor defaults it to "on".
+    assert found["vscode.settings.auto-tasks"].severity is Severity.LOW
 
 
 def test_settings_pointing_at_repo_binary(tmp_path: Path) -> None:
