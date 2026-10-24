@@ -295,7 +295,7 @@ permissions:
 
 steps:
   - uses: actions/checkout@v5
-  - uses: ag3ntsc4rn/autorun-audit@v0.3.0
+  - uses: ag3ntsc4rn/autorun-audit@v0.4.0
     with:
       allowlist: .autorun-audit.toml   # optional
 ```
@@ -323,7 +323,7 @@ uvx autorun-audit repo . --format sarif --output autorun.sarif --fail-on high
 
 ```yaml
 - repo: https://github.com/ag3ntsc4rn/autorun-audit
-  rev: v0.3.0
+  rev: v0.4.0
   hooks:
     - id: autorun-audit
 ```
