@@ -13,7 +13,7 @@ from rich.text import Text
 from autorun_audit import __version__
 from autorun_audit.allowlist import Allowed, Entry
 from autorun_audit.capabilities import Capability
-from autorun_audit.models import Finding, Severity
+from autorun_audit.models import Finding, Prompt, Severity
 from autorun_audit.scanners.common import truncate
 
 TOOL_URI = "https://github.com/ag3ntsc4rn/autorun-audit"
@@ -54,14 +54,27 @@ def describe_capabilities(f: Finding) -> str:
     return " · ".join(parts)
 
 
-def _print_indented(console: Console, body: Text, indent: int = 2) -> None:
+def _print_indented(console: Console, body: Text, indent: int = 2, *, end: bool = True) -> None:
     """Print ``body`` indented, keeping wrapped lines indented too, with no trailing padding."""
     options = console.options.update_width(max(console.width - indent, 20))
     for line in console.render_lines(body, options, pad=False):
         rendered = Text.assemble(" " * indent, *((seg.text, seg.style or "") for seg in line))
         rendered.rstrip()
         console.print(rendered, soft_wrap=True)
-    console.print()
+    if end:
+        console.print()
+
+
+def _prompt_details(f: Finding) -> Text:
+    """The note per tool and the modes that never ask, printed under "asks first"."""
+    details = Text()
+    for note in f.prompt_notes:
+        details.append(f"{note}\n", style="dim")
+    for mode in f.prompt_skipped_when:
+        details.append("never asks in: ", style="dim")
+        details.append(f"{mode}\n")
+    details.rstrip()
+    return details
 
 
 def render_text(report: Report, console: Console) -> None:
@@ -85,7 +98,15 @@ def render_text(report: Report, console: Console) -> None:
         body = Text()
         body.append("runs when: ", style="dim")
         body.append(safe(f.trigger))
-        body.append(f"\n{safe(f.message)}")
+        if f.prompt:
+            body.append("\nasks first: ", style="dim")
+            body.append(f.prompt.description, style="bold" if f.prompt is Prompt.NONE else "")
+            if details := _prompt_details(f):
+                # Printed as its own block so wrapped notes stay under the "asks first" line.
+                _print_indented(console, body, end=False)
+                _print_indented(console, details, indent=4, end=False)
+                body = Text()
+        body.append(f"\n{safe(f.message)}" if body else safe(f.message))
         if f.owner:
             body.append(f"\nowner: {safe(f.owner)}", style="dim")
         if f.command:
@@ -161,6 +182,8 @@ def _sarif_result(f: Finding, base: Path | None) -> dict[str, object]:
         text += f" Command: {f.command}"
     if f.capabilities:
         text += f" Can: {describe_capabilities(f)}."
+    if f.prompt:
+        text += f" Asks first: {f.prompt.description}."
     if f.reasons:
         text += " Suspicious: " + "; ".join(f.reasons) + "."
     return {
@@ -182,6 +205,9 @@ def _sarif_result(f: Finding, base: Path | None) -> dict[str, object]:
             "owner": f.owner,
             "capabilities": list(f.capabilities),
             "analyzedFiles": [p for p, _ in f.analyzed_files],
+            "prompt": f.prompt.value if f.prompt else None,
+            "promptNotes": list(f.prompt_notes),
+            "promptSkippedWhen": list(f.prompt_skipped_when),
         },
     }
 

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Findings now say whether the tool that runs them **asks first**: `none`, `folder-trust`,
+  `per-item` or `manual`. When several tools read the same file, the finding shows the least
+  protected one, with a note per tool (for example, Cursor runs folder-open tasks with no
+  prompt because workspace trust is off by default, while VS Code asks). Modes that never ask,
+  such as `claude -p` and Agent SDK runs, are listed separately. Researched against each tool's
+  documentation and code rather than guessed.
+- JSON output adds `prompt`, `prompt_notes` and `prompt_skipped_when`; SARIF properties add
+  `prompt`, `promptNotes` and `promptSkippedWhen`. They aren't part of the fingerprint, so
+  existing allowlists keep matching.
+
+### Changed
+
+- The folder-open trigger no longer says "(trusted workspace)", since Cursor doesn't require
+  one.
+
 ## [0.3.0] - 2026-10-21
 
 ### Added

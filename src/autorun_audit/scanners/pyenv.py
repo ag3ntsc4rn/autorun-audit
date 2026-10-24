@@ -17,7 +17,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from autorun_audit import capabilities
+from autorun_audit import capabilities, prompts
 from autorun_audit.models import Finding, Severity, escalate
 from autorun_audit.suspicious import reasons
 
@@ -210,7 +210,7 @@ def scan_environment(env: Environment) -> list[Finding]:
             path = directory / name
             if path.is_file():
                 findings.append(_scan_customize(path, _record_owners(directory)))
-    findings = [_with_capabilities(f) for f in findings]
+    findings = [prompts.annotate(_with_capabilities(f)) for f in findings]
     return sorted(findings, key=lambda f: (-f.severity, f.path, f.line or 0))
 
 

@@ -26,6 +26,24 @@ class Severity(enum.IntEnum):
             raise ValueError(f"unknown severity {value!r} (choose from {choices})") from None
 
 
+class Prompt(enum.Enum):
+    """Whether the tool that runs a finding asks the user first, under default settings."""
+
+    NONE = "none"
+    FOLDER_TRUST = "folder-trust"
+    PER_ITEM = "per-item"
+    MANUAL = "manual"
+
+    @property
+    def description(self) -> str:
+        return {
+            Prompt.NONE: "no",
+            Prompt.FOLDER_TRUST: "once per folder (workspace trust), then never again",
+            Prompt.PER_ITEM: "yes, for each item",
+            Prompt.MANUAL: "only runs after you set it up",
+        }[self]
+
+
 @dataclass(frozen=True)
 class Finding:
     """One thing that can execute without an explicit user action."""
@@ -48,6 +66,12 @@ class Finding:
     evidence: tuple[tuple[str, str, str | None, int | None], ...] = ()
     analyzed_files: tuple[tuple[str, str], ...] = ()
     programs: tuple[str, ...] = ()
+    # Whether the user is asked before it runs (see prompts.py): the least protected case across
+    # the tools that read the file, a note per tool, and the modes in which nobody is asked.
+    # Not part of the fingerprint: it describes the tools, not what runs.
+    prompt: Prompt | None = None
+    prompt_notes: tuple[str, ...] = ()
+    prompt_skipped_when: tuple[str, ...] = ()
 
     @property
     def location(self) -> str:
@@ -92,6 +116,9 @@ class Finding:
             ],
             "analyzed_files": [{"path": p, "sha256": s} for p, s in self.analyzed_files],
             "programs": list(self.programs),
+            "prompt": self.prompt.value if self.prompt else None,
+            "prompt_notes": list(self.prompt_notes),
+            "prompt_skipped_when": list(self.prompt_skipped_when),
         }
 
 
