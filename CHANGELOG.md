@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The folder-open trigger no longer says "(trusted workspace)", since Cursor doesn't require
   one.
+- `vscode.settings.auto-tasks` is now low instead of high. VS Code 1.109+ and Windsurf ignore
+  `task.allowAutomaticTasks` in workspace settings, and Cursor already defaults it to `on`, so a
+  repository setting it only matters to users who turned automatic tasks off. The message
+  changed too, so allowlist entries for this rule need regenerating with `--write-allowlist`.
 
 ## [0.3.0] - 2026-10-21
 

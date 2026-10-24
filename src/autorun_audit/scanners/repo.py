@@ -240,14 +240,18 @@ def _vscode_settings(ctx: _Context) -> None:
             rel = ctx.rel(path)
             line = line_of(text, f'"{key}"')
             if lower == "task.allowautomatictasks" and str(value).lower() == "on":
+                # VS Code 1.109+ and Windsurf only read this setting from user settings, and
+                # Cursor already defaults it to "on"; it matters only to users who turned it off.
                 ctx.add(
                     Finding(
                         rule="vscode.settings.auto-tasks",
-                        severity=Severity.HIGH,
+                        severity=Severity.LOW,
                         path=rel,
                         line=line,
                         trigger=EDITOR_OPEN,
-                        message="Workspace turns on automatic tasks, so folder-open tasks run without asking.",
+                        message="Workspace turns automatic tasks back on for users who turned them "
+                        "off, in Cursor and VS Code before 1.109. VS Code 1.109+ and Windsurf "
+                        "ignore this setting in a workspace.",
                     )
                 )
             elif lower.startswith("terminal.integrated.") and any(
